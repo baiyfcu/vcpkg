@@ -648,8 +648,22 @@ namespace vcpkg::Build
                 fs.create_directories(archive_path.parent_path(), ec);
                 fs.rename(tmp_archive_path, archive_path, ec);
                 if (ec)
-                    System::println(
-                        System::Color::warning, "Failed to store binary cache: %s", archive_path.u8string());
+                {
+                    auto remote_fs_temp_path = archive_path;
+                    remote_fs_temp_path.replace_filename(archive_name + ".tmp");
+                    fs.copy_file(tmp_archive_path, remote_fs_temp_path, fs::copy_options::none, ec);
+                    if (!ec)
+                    {
+                        fs.rename(remote_fs_temp_path, archive_path, ec);
+                        std::error_code ignore_errors;
+                        fs.remove(tmp_archive_path, ignore_errors);
+                    }
+
+                    System::println(System::Color::warning,
+                                    "Failed to store binary cache %s: %s",
+                                    archive_path.u8string(),
+                                    ec.message());
+                }
                 else
                     System::println("Stored binary cache: %s", archive_path.u8string());
             }
